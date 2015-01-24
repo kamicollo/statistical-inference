@@ -1,0 +1,99 @@
+---
+title: "Tooth Growth data analysis"
+author: "Aurimas R."
+date: "01/24/2015"
+output: pdf_document
+---
+
+```{r echo=FALSE}
+library(ggplot2)
+library(grid)
+data(ToothGrowth)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  require(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+
+#Tooth Growth dataset
+
+Tooth growth dataset contains data from a trial where impact of vitamin C (administrated as orange juice or ascorbic acid) was tested on the lenght of guinea pig teeth. Three dose levels were applied. The dataset thus contains 60 observations with 3 variables: len (tooth length), supp (factor variable indicating delivery method) and dose (in miligrams). Let's take a look at the data.
+
+```{r fig.height=3}
+summary(ToothGrowth$len)
+unique(ToothGrowth$dose)
+unique(ToothGrowth$supp)
+p1 <- ggplot(data=ToothGrowth, aes(x=dose, y=len, colour=supp)) + geom_point(shape=10)
+p2 <- ggplot(data=ToothGrowth, aes(x=supp, y=len, colour=dose)) + geom_point(shape=10)
+multiplot(p1, p2, cols=2) #definition of multiplot function is in appendix.
+
+```
+
+It appears that there is a clear different in teeth length between the dosage groups - the higher the dose, the longer the teeth. The relationship between teeth length and delivery method is not that clear from visually inspecting the data. It appears, however, that VC (ascorbic acid) treatment group exhibited higher variance.
+
+#Comparing tooth growth
+##Impact of dosage levels
+
+To compare the impact of dosage levels, let's construct CI intervals (95%) of mean tooth length for each of the dosage levels. If the intervals do not intersect, we can state that the impact of dosage levels is indeed statistically significant with 95% confidence.
+
+```{r}
+func <- function(data, significance = 0.975) {
+    mean <- mean(data)
+    sd <- sd(data)
+    mean + c(-1, 1) * qt(significance, length(data) - 1) * sd / sqrt(length(data))
+}
+tapply(ToothGrowth$len, ToothGrowth$dose, func)
+
+```
+
+The confidence intervals clearly do not intersect, so the dosage levels have a significant impact to tooth length.
+
+##Impact of treatment administration
+
+To test if there is a significant relationship between teeth length and treatment administration, let's consider testing if the means are the same using a T-test for uneven variances (see above - the variances look very different!). Note that the trial was performed only once on each guinea pig (poor pigs - they died in the name of science!), so we will use independent group comparison, not pair-wise comparison.
+
+```{r}
+t.test(len ~ supp, data=ToothGrowth, var.equal=FALSE, paired=FALSE)
+```
+
+The output of the test indicates that the means appear to be not statistically different at 95% significance level. Thus, the delivery method did not have a statistically significant impact on teeth growth.
+
+##Additional assumptions required
+
+Note that besides the above stated assumptions (i.e. variances are unequal between treatment administration groups, the data is not paired), the above analysis only holds if:
+
+- The means of the various subsets follow Student T distribution;
+- There are no missing variables that are not taken into account; or, alternatively, the results do not consider that - i.e. there may not be any direct relationship between tooth length and treatment method directly, but treatment method may have an impact once dose level is considered
+- The guinea pigs were selected randomly for the trial and assigned to the groups randomly, too

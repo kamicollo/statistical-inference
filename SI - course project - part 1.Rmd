@@ -1,0 +1,67 @@
+---
+title: "Investigation of Exponential Distribution"
+author: "Aurimas R."
+date: "01/24/2015"
+output: pdf_document
+---
+
+```{r echo=FALSE}
+library(ggplot2)
+set.seed(123456)
+```
+
+This report analyses the properties of exponential distribution and the distribution of its means. The analysis is performed by random 1000 simulations of 40 exponential distributions. The report shows that the exponential distribution with a rate `lambda` indeed has a mean and variance of `1 / lambda`, whereas the distribution of its randomly drawn means follows normal distribution.
+
+#Simulations
+
+To investigate the properties of sample means and variances, let us run 1000 simulations, where 40 random samples are taken from an exponential distribution and their mean is calculated. A rate parameter `lambda` of 0.2 is used.
+
+```{r}
+mns = NULL
+nosim = 1000
+sample_size = 40
+lambda = 0.2
+for (i in 1 : nosim) mns = c(mns, mean(rexp(sample_size, lambda)))
+```
+
+#Analysis
+##Sample Mean versus Theoretical Mean
+
+The theoretical mean of exponential distribution is `1 / lambda` and, by CLT, the average of sample means converges to theoretical mean, so with `lambda = 2`, the observed average of sample means should be close to 5. Let's see if that is the case.
+
+```{r tidy=FALSE}
+sample_mean = mean(mns)
+print(paste("Sample mean is ", sample_mean))
+ggplot(data.frame(mns), aes(mns)) + 
+    geom_histogram(binwidth=0.1, colour="grey") +
+    geom_vline(xintercept=1/lambda, linetype="solid", colour="blue") +
+    geom_vline(xintercept=mean(mns), linetype="solid", colour="red") +
+    ggtitle("Sample vs. theoretical mean of random samples") +
+    xlab("Means of exponential distribution with rate of 0.2")
+```
+
+As one can see in the chart above, the theoretical mean (marked blue) and sample mean (marked red) are very close. The sample mean, as discussed, in this case is `r sample_mean`.
+
+##Sample Variance versus Theoretical Variance
+
+According to CLT, the variance of sample means should be equal to `S^2 = sigma^2 / sqrt(n)`, where sigma is the variance of the underlying distribution. In our case, `S^2 = (1/lambda)^2 / sqrt(1000) = 5^2 / sqrt(1000)`. Let's see if that's the case:
+
+```{r}
+print(paste("Variance of sample means is: ", round(var(mns),5)))
+print(paste("Theoretical variance is: ", ((1 / lambda) / sqrt(sample_size))^2))
+```
+
+The variances are pretty close, as expected. 
+\newpage
+
+##Distribution
+
+Let's investigate if the distribution is normal. One could do it visually by using QQ plot (which shows how much it deviates from normal distribution) or analytically. We will focus on analytical approach. As seen below, the difference of observed distribution (red line) from normal distribution (blue line) is relatively small.
+
+```{r tidy=FALSE}
+ggplot(data.frame(mns), aes(sample= mns)) +
+    stat_qq(color="red", alpha=1) +
+    geom_abline(intercept=mean(mns), slope=sd(mns), colour="blue") +
+    ggtitle("QQ plot of average sample means")
+
+
